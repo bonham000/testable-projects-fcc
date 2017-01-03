@@ -2,7 +2,6 @@
 import $ from 'jquery';
 import chai from 'chai';
 import test_suite_skeleton from './assets/test_suite_skeleton';
-import test_suite_skeleton_init from './assets/test_suite_skeleton_init';
 import mocha_CSS from './assets/mocha_CSS';
 import createDrumMachineTests from './project-tests/drum-machine-tests';
 import createMarkdownPreviewerTests from './project-tests/markdown-previewer-tests';
@@ -33,13 +32,11 @@ export let project_selector;
 // When the document is fully loaded,
 // create the "Tests" button and the corresponding modal window, jquery required)
 $(document).ready(function() {
-  //let project_name = '';
   // check for chrome
   const isChrome = !!window.chrome && !!window.chrome.webstore;
   if (isChrome === false) {
     alert('Test Suite Compatible with Chrome Only');
   }
-
   // check mocha is loaded and populate test suite
   let mochaCheck = setInterval(() => runCheck(), 50);
   function runCheck() {
@@ -49,13 +46,11 @@ $(document).ready(function() {
         mocha.setup("bdd");
         const testDiv = document.createElement("div");
         testDiv.style.position = "inherit";
-        let selected = localStorage.getItem('selected');
-        if (selected === null && typeof project_name === 'undefined') {
-          testDiv.innerHTML = test_suite_skeleton_init;
-        } else {
-          testDiv.innerHTML = test_suite_skeleton;
-        }
+        testDiv.innerHTML = test_suite_skeleton;
         document.body.appendChild(testDiv);
+        let project_titleCase = localStorage.getItem('project_titleCase');
+        document.getElementById('placeholder').innerHTML = project_titleCase === null ? project_name.replace(/-/g, ' ') : project_titleCase;
+        document.getElementById('fcc_test_suite_indicator').innerHTML = project_titleCase === null ? 'FCC Test Suite: ' + project_name.replace(/-/g, ' ') : 'FCC Test Suite: ' + project_titleCase;
       };
     } catch (err) {
       console.warn('mocha not loaded yet');
@@ -66,15 +61,28 @@ $(document).ready(function() {
 
 // UTILITY FUNCTIONS:
 
+// select project dropdown
 export function selectProject(project) {
   FCC_Global.project_selector = project;
-  document.getElementById('fcc_test_selector_modal').classList.add('fcc_test_selector_modal_hidden');
-  localStorage.setItem('selected', true);
-  localStorage.setItem('project', project);
+  let project_titleCase = project.replace(/-/g,' ').split(' ');
+  project_titleCase = project_titleCase.map(word =>  word.charAt(0).toUpperCase() + word.substr(1));
+  project_titleCase = project_titleCase.join(' ');
+  document.getElementById('fcc_test_suite_indicator').innerHTML = 'FCC Test Suite: ' + project_titleCase;
+  localStorage.setItem('project_titleCase', project_titleCase);
+  localStorage.setItem('project_selector', project);
 }
 
-export function resetSelection() {
-  document.getElementById('fcc_test_selector_modal').classList.remove('fcc_test_selector_modal_hidden');
+// hamburger menu transformation
+export function hamburger_transform() {
+  if (document.getElementById('hamburger_top').classList.contains('transform_top')) {
+    document.getElementById('hamburger_top').classList.remove('transform_top');
+    document.getElementById('hamburger_middle').classList.remove('transform_middle');
+    document.getElementById('hamburger_bottom').classList.remove('transform_bottom');
+  } else {
+    document.getElementById('hamburger_top').classList.add('transform_top');
+    document.getElementById('hamburger_middle').classList.add('transform_middle');
+    document.getElementById('hamburger_bottom').classList.add('transform_bottom');
+  }
 }
 
 // Updates the button color and text on the target project, to show how many tests passed and how many failed. 
@@ -91,15 +99,18 @@ export function FCCUpdateTestResult(nbTests, nbPassed, nbFailed){
 // Updates the button text on the target project, to show how many tests were executed so far. 
 export function FCCUpdateTestProgress(nbTests, nbTestsExecuted){
   const button = document.getElementById('fcc_test_button');
+  button.classList.add('fcc_test_btn-executing');
   button.innerHTML = `Testing ${nbTestsExecuted}/${nbTests}`;
 }
 
+// open main modal
 export function FCCOpenTestModal(){
   const modal = document.getElementById('fcc_test_message-box');
   modal.classList.remove("fcc_test_message-box-hidden");
   modal.classList.add("fcc_test_message-box-shown");
 }
 
+// close main modal
 export function FCCCloseTestModal(){
   const modal = document.getElementById('fcc_test_message-box');
   modal.classList.remove("fcc_test_message-box-shown");
@@ -110,7 +121,7 @@ export function FCCCloseTestModal(){
 $(document).keyup(function(e) {
   e = e || window.event;
   if (e.keyCode == 27) { 
-    FCCCloseTestModal() || document.getElementById('fcc_test_selector_modal').classList.add('fcc_test_selector_modal_hidden');
+    FCCCloseTestModal();
   }
 });
 
@@ -121,14 +132,16 @@ export function FCCclickOutsideToCloseModal(e) {
   } 
 }
 
+// run tests
 export function FCCRerunTests(){
   const button = document.getElementById('fcc_test_button');
   button.innerHTML = `Testing`;
-  button.classList = [];
+  button.classList = ["fcc_foldout_buttons"];
   button.classList.add("fcc_test_btn-default");
   FCCInitTestRunner();
 }
 
+// reset tests
 export function FCCResetTests(suite) {
   suite.tests.forEach(function(t) {
     delete t.state;
@@ -156,10 +169,13 @@ onkeydown = onkeyup = function(e){
     } else {
       FCCCloseTestModal();
     }
+  } else if (map[17] && map[16] && map[79]) { // open/close foldout menu: Ctrl + Shift + O
+    document.getElementById('toggle').click();
   }
 }
 
-export function alertOnce() { // hotkey interferes w/ markdown tests, disable and alert
+// hotkey interferes w/ markdown tests, disable and alert
+export function alertOnce() { 
   var alerted = sessionStorage.getItem('alerted') || false;
   if (alerted) {
     return;
@@ -169,6 +185,7 @@ export function alertOnce() { // hotkey interferes w/ markdown tests, disable an
   }
 }
 
+// init tests
 export function FCCInitTestRunner(){
   let testRunner = null;
   // empty the mocha tag in case of rerun
@@ -176,7 +193,7 @@ export function FCCInitTestRunner(){
   // empty the test suite in the mocha object
   mocha.suite.suites = [];
   // create tests
-  switch (FCC_Global.project_selector || localStorage.getItem('project') || project_name) {
+  switch (FCC_Global.project_selector || localStorage.getItem('project_selector') || project_name) {
     case "random-quote-machine":
       createRandomQuoteMachineTests();
       break;
